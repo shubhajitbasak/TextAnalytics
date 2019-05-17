@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Shubhajit Basak" />
+
+
+<title>Exploratory Analysis of a Text Corpus</title>
+
+<script src="TextAnalytics_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="TextAnalytics_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="TextAnalytics_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="TextAnalytics_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="TextAnalytics_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="TextAnalytics_files/navigation-1.1/tabsets.js"></script>
+<link href="TextAnalytics_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="TextAnalytics_files/highlightjs-9.12.0/highlight.js"></script>
+<script src="TextAnalytics_files/kePrint-0.0.1/kePrint.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Exploratory Analysis of a Text Corpus</h1>
+<h4 class="author"><em>Shubhajit Basak</em></h4>
+
+</div>
+
+
+<p>This task is all about topic modeling in large set of short text documents. I am trying to cluster the documents according to the frequency of word counts through TF-IDF and later through the cosine distance between words. One of the major goal is to find the optimum value of k to get the right number of clusters and visualise the most frequent words to get the topic of different clusters.</p>
+<p>Lets start with importing the required packages</p>
+<pre class="r"><code>library(tm)
+library(SnowballC)
+library(wordcloud)
+library(ggplot2)
+library(ggdendro)
+library(dplyr)
+library(cluster)
+library(HSAUR)
+library(fpc)
+library(skmeans)
+library(plyr)
+library(gplots)
+library(stats)
+library(philentropy)
+library(networkD3)
+library(ape)
+library(RColorBrewer)
+library(wesanderson)
+library(wordcloud2)
+library(treemapify)
+library(knitr)
+library(kableExtra)</code></pre>
+<div id="data-preparation" class="section level4">
+<h4>Data Preparation:</h4>
+<p>Here after reading the documents I am removing the symbols, punctuations exta white spaces to clean up the corpus. I am also converting the whole text in lower case, removed stopwords, stemmed the words to there root.This way I have removed unnecessary words and junked characters to cluster them accurately.</p>
+<pre class="r"><code>setwd(&quot;D:/Ratul/MyGit/Data-Visualisation/TextAnalytics/&quot;)
+
+
+
+corpus &lt;- VCorpus(DirSource(&quot;corpus&quot;, recursive = TRUE, encoding = &quot;UTF-8&quot;), 
+                   readerControl = list(language = &quot;eng&quot;))
+
+# Cleaning the corpus..
+toSpace &lt;- content_transformer(function (x , pattern ) gsub(pattern, &quot; &quot;, x))
+corpus &lt;- tm_map(corpus, toSpace, &quot;/&quot;)
+corpus &lt;- tm_map(corpus, toSpace, &quot;/.&quot;)
+corpus &lt;- tm_map(corpus, toSpace, &quot;@&quot;)
+corpus &lt;- tm_map(corpus, toSpace, &quot;\\|&quot;)
+
+# Converting all text to lower case. removing stop words and punctuations
+corpus &lt;- tm_map(corpus, content_transformer(tolower))
+corpus &lt;- tm_map(corpus, removeWords, stopwords(&quot;english&quot;))
+corpus &lt;- tm_map(corpus, removePunctuation)
+
+# Remove numbers, letters and stemming
+corpus &lt;- tm_map(corpus, removeNumbers)
+corpus &lt;- tm_map(corpus, removeWords, c(letters)) 
+corpus &lt;- tm_map(corpus, stemDocument)</code></pre>
+</div>
+<div id="term-document-matrix-creation-and-sampling-of-the-data" class="section level4">
+<h4>Term Document Matrix Creation and Sampling of the data</h4>
+<p>After cleaning up the data I will create the Document Term Matrix where each word represent by a column and each document represent by a row. To reduce the sparsity I have tried to increase the threshold but it will remove important terms, so I decided to stick with the 0.99 percent level. I have removed the rows containing zeros to dense the matrix. As the corpus size is large I am taking a sample of 40 percent and will try to get the clusters out of that data.</p>
+<pre class="r"><code>corpus.dtm &lt;- DocumentTermMatrix(corpus, 
+                                  control = list(
+                                    weighting = function(x) 
+                                      weightTfIdf(x, normalize = TRUE)))
+
+sparsity_threshold = 0.9995
+corpus.dtm&lt;-removeSparseTerms(corpus.dtm, sparsity_threshold)
+corpus.dtm.mat &lt;- corpus.dtm %&gt;% as.matrix()
+
+# remove any zero rows
+corpus.dtm.mat &lt;- corpus.dtm.mat[rowSums(corpus.dtm.mat^2) !=0,]
+
+
+set.seed(62)
+percent = 40
+sample_size = nrow(corpus.dtm.mat) * percent/100
+
+corpus.dtm.mat.sample &lt;- corpus.dtm.mat[sample(1:nrow(corpus.dtm.mat), 
+                                                 sample_size, replace=FALSE),]</code></pre>
+</div>
+<div id="find-optimum-cluster-through-elbow-method" class="section level4">
+<h4>Find Optimum Cluster through Elbow Method</h4>
+<p>I will now try to apply the elbow method to find the optimum k from the data after creating the Term Document Matrix and applying different values of K ranging from 1 to 30. I will plot the cost for every K value and try to find the elbow -</p>
+<pre class="r"><code>corpus.tdm &lt;- TermDocumentMatrix(corpus, control = 
+                                    list(weighting = function(x) weightTf(x)))
+corpus.tdm&lt;-removeSparseTerms(corpus.tdm, 0.999)
+corpus.tdm.sample &lt;- corpus.tdm[, rownames(corpus.dtm.mat.sample)]
+corpus.tdm.sample.mat &lt;- corpus.tdm.sample %&gt;% as.matrix()
+
+cost_df &lt;- data.frame()
+
+#run kmeans for all clusters up to 100
+for(i in 1:20){
+  #Run kmeans for each level of i, allowing up to 100 iterations for convergence
+  kmeans&lt;- kmeans(x=corpus.dtm.mat.sample, centers=i, iter.max=100)
+
+  #Combine cluster number and cost together, write to df
+  cost_df&lt;- rbind(cost_df, cbind(i, kmeans$tot.withinss))
+
+}
+
+names(cost_df) &lt;- c(&quot;cluster&quot;, &quot;cost&quot;)
+
+
+lm1 &lt;- lm(cost_df$cost[1:10] ~ cost_df$cluster[1:10])
+lm2 &lt;- lm(cost_df$cost[10:19] ~ cost_df$cluster[10:19])
+lm3 &lt;- lm(cost_df$cost[20:30] ~ cost_df$cluster[20:30])</code></pre>
+<p>Plot the graph -</p>
+<pre class="r"><code>cost_df$fitted &lt;- ifelse(cost_df$cluster &lt;10, (lm1$coefficients[1] + lm1$coefficients[2] *cost_df$cluster),
+                         ifelse(cost_df$cluster &lt;20, (lm2$coefficients[1] + lm2$coefficients[2]*cost_df$cluster),
+                                (lm3$coefficients[1] + lm3$coefficients[2] *cost_df$cluster)))
+
+#Cost plot
+ggplot(data=cost_df, aes(x=cluster, y=cost, group=1)) +
+  theme_bw(base_family=&quot;Garamond&quot;) +
+  geom_line(colour = &quot;darkgreen&quot;) +
+  theme(text = element_text(size=20)) +
+  ggtitle(&quot;Reduction In Cost For Values of &#39;k&#39;\n&quot;) +
+  xlab(&quot;\nClusters&quot;) +
+  ylab(&quot;Within-Cluster Sum of Squares\n&quot;) +
+  scale_x_continuous(breaks=seq(from=0, to=100, by= 10)) +
+  geom_line(aes(y= fitted), linetype=2)</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-5-1.png" /><!-- --></p>
+</div>
+<div id="observations" class="section level4">
+<h4>Observations:</h4>
+<ul>
+<li>As seen in the above plot there is no clear elbow, and this method will not work to find the optimum k value</li>
+</ul>
+</div>
+<div id="apply-k---mean-to-create-clusters" class="section level4">
+<h4>Apply K - Mean to Create Clusters</h4>
+<p>Though the elbow method fails to find the optimum k, I will try to apply K-Mean algorithm to get the clusters with k = 3, to see if it is able to show some patterns out of the data. I have manually inspect few documents randomly and identified some stopwords like “from”,“subject”,“organization”,“lines” and few others as they are present in almost all the documents. I will plot the word cloud for these clusters to see any patterns.</p>
+<pre class="r"><code>corpus.dtm.mat.sample.skm &lt;- skmeans(corpus.dtm.mat.sample,3, method=&#39;genetic&#39;)
+
+corpus.dtm.mat.sample.skm.cluster &lt;- as.data.frame(corpus.dtm.mat.sample.skm$cluster)
+
+colnames(corpus.dtm.mat.sample.skm.cluster) &lt;- c(&quot;cluster&quot;)
+
+stp.words &lt;- c(&quot;can&quot;, &quot;will&quot;, &quot;get&quot;, &quot;line&quot;, &quot;use&quot;, &quot;organ&quot;, 
+               &quot;subject&quot;, &#39;lines&#39;, &#39;organization&#39;,&quot;write&quot;,
+               &quot;nntppostinghost&quot;,&quot;distribution&quot;,&quot;from&quot;)
+
+m&lt;- length(unique(corpus.dtm.mat.sample.skm$cluster))
+set.seed(99)
+par(mfrow=c(m,2))
+
+# As I have found few words are very common in the email text I am removing those words 
+
+for (i in 1:m) {
+  
+  
+  #the documents in  cluster i
+  cluster_doc_ids &lt;-which(corpus.dtm.mat.sample.skm$cluster==i)
+  
+  #the subset of the matrix with these documents
+  corpus.tdm.sample.mat.cluster&lt;- corpus.tdm.sample.mat[, cluster_doc_ids]
+  
+  # sort the terms by frequency for the documents in this cluster
+  v &lt;- sort(rowSums(corpus.tdm.sample.mat.cluster),decreasing=TRUE)
+  d &lt;- data.frame(word = names(v),freq=v)
+  rw_nm &lt;- setdiff(rownames(d), stp.words)
+  d &lt;- d[rw_nm, ]
+  
+  # call word cloud function
+  wordcloud(words = d$word, freq = d$freq, scale=c(3,.1), min.freq = 1,
+            max.words=200, random.order=FALSE, rot.per=0.35, 
+            colors=c(&#39;#feedde&#39;,&#39;#fdbe85&#39;,&#39;#fd8d3c&#39;,&#39;#e6550d&#39;,&#39;#a63603&#39;))
+  title(paste(&quot;cluster&quot;, i))
+  
+  
+  barplot(d[1:10,]$freq, las = 1, names.arg = d[1:10,]$word,
+          col =&quot;#e6550d&quot;, main =paste(&quot;Most frequent words - Cluster &quot;, i),
+          ylab = &quot;Word frequencies&quot;, width = 0.05, border = &quot;red&quot;, las=2)
+}</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-6-1.png" /><!-- --></p>
+</div>
+<div id="observations-1" class="section level4">
+<h4>Observations:</h4>
+<ul>
+<li>We can see dividing the corpus into three clusters through K Mean failed to provide any concrete information about the data</li>
+<li>From the words present in the clusters we can see the presence of words like God, game, windows, program, team from which we can say there might be further clusters with these topics</li>
+</ul>
+</div>
+<div id="hierarchical-clustering-using-dendogram" class="section level4">
+<h4>Hierarchical Clustering using Dendogram</h4>
+<p>As the K Means failed to cluster the dataset properly and its also taking time to run I am now trying to use the hierarchical clustering using Dendogram Method.It will give the clustering as well as any hierarchical division if present in the data.</p>
+<pre class="r"><code># from philentropy library. Slower than dist function, but handles cosine similarity
+sim_matrix&lt;-distance(corpus.dtm.mat.sample, method = &quot;cosine&quot;)
+
+# for readiblity (and debugging) put the doc names on the cols and rows
+colnames(sim_matrix) &lt;- rownames(corpus.dtm.mat.sample)
+rownames(sim_matrix) &lt;- rownames(corpus.dtm.mat.sample)
+
+
+# to create a distance measure for hierarchical clustering
+dist_matrix &lt;- as.dist(max(sim_matrix)-sim_matrix)
+
+# hierarchical clustering
+corpus.dtm.sample.dend &lt;- hclust(dist_matrix, method = &quot;ward.D&quot;) 
+
+# plot the dendogram
+# we hope to see some structure that reflects the finding of the kmeans algorithm
+set.seed(2584)
+par(mfrow=c(1,1))
+plot(corpus.dtm.sample.dend, hang= -1, labels = FALSE,  main = &quot;Cluster dendrogram&quot;, 
+     sub = NULL, xlab = NULL, ylab = &quot;Height&quot;)</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-7-1.png" /><!-- --></p>
+</div>
+<div id="observation" class="section level4">
+<h4>Observation:</h4>
+<ul>
+<li>Seeing the dendogram we can see at the height of 4.2 there are around 9 to 14 clusters, I have tried with different value and ultimately settled down with 13 clusters, lets draw the boundary lines for the value of k as 13</li>
+</ul>
+<pre class="r"><code>k =13
+#h = 4.2
+
+plot(corpus.dtm.sample.dend, hang= -1, labels = FALSE,  main = &quot;Cluster dendrogram&quot;, 
+     sub = NULL, xlab = NULL, ylab = &quot;Height&quot;)
+
+rect.hclust(corpus.dtm.sample.dend, k = k , border = &quot;red&quot;) # h = h</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-8-1.png" /><!-- --></p>
+<p>Lets get the number of documents in different clusters -</p>
+<pre class="r"><code># number of clusters we wish to examine
+
+
+# call the cutree function
+# cutree returns a vector of cluster membership
+# in the order of the original data rows
+corpus.dtm.sample.dend.cut &lt;- cutree(corpus.dtm.sample.dend,k = k ) # h = h
+
+#number of clusters at the cut
+m &lt;- length(unique(corpus.dtm.sample.dend.cut))
+
+# create a data frame from the cut 
+corpus.dtm.sample.dend.cut &lt;- as.data.frame(corpus.dtm.sample.dend.cut)
+
+#add a meaningful column namane
+colnames(corpus.dtm.sample.dend.cut) = c(&quot;cluster&quot;)
+
+# add the doc names as an explicit column
+corpus.dtm.sample.dend.cut$docs &lt;- rownames(corpus.dtm.sample.dend.cut)
+
+corpus.dtm.sample.dend.cut$docs&lt;-lapply(corpus.dtm.sample.dend.cut$docs, tm::removeNumbers)
+
+# Unlist the list assigned by rownames to $docs
+corpus.dtm.sample.dend.cut$docs &lt;- unlist(corpus.dtm.sample.dend.cut$docs)
+
+
+# create a frequency table
+corpus.dtm.sample.dend.cut.table &lt;-table(corpus.dtm.sample.dend.cut$cluster, 
+                                         corpus.dtm.sample.dend.cut$docs)
+
+#displays the frequency data
+corpus.dtm.sample.dend.cut.table</code></pre>
+<pre><code>##     
+##       doc
+##   1  1315
+##   2   302
+##   3   238
+##   4   331
+##   5   234
+##   6    92
+##   7    47
+##   8   128
+##   9    38
+##   10   20
+##   11   37
+##   12   49
+##   13   25</code></pre>
+<ul>
+<li>We can see the first cluster is large and may contain further segmentations, but here I am not dividing it further</li>
+</ul>
+</div>
+<div id="populate-the-word-cloud--" class="section level4">
+<h4>Populate the Word Cloud -</h4>
+<p>Lets populate the word cloud and t bar chart showing the frequent words in different clusters -</p>
+<pre class="r"><code>#number of clusters at the cut
+m &lt;- length(unique(corpus.dtm.sample.dend.cut$cluster))
+
+
+set.seed(1478)
+par(mfrow=c(2,2))
+
+# for each cluster plot an explanatory word cloud
+for (i in 1:m) {
+  #the documents in  cluster i
+  cut_doc_ids &lt;-which(corpus.dtm.sample.dend.cut$cluster==i)
+  
+  #the subset of the matrix with these documents
+  corpus.tdm.sample.mat.cluster&lt;- corpus.tdm.sample.mat[, cut_doc_ids]
+  
+  # sort the terms by frequency for the documents in this cluster
+  v &lt;- sort(rowSums(corpus.tdm.sample.mat.cluster),decreasing=TRUE)
+  d &lt;- data.frame(word = names(v),freq=v)
+  rw_nm &lt;- setdiff(rownames(d), stp.words)
+  d &lt;- d[rw_nm, ]
+  
+  # call word cloud function
+  wordcloud(words = d$word, freq = d$freq, scale=c(3,.1), min.freq = 1,
+            max.words=200, random.order=FALSE, rot.per=0.35, 
+            colors=c(&#39;#feedde&#39;,&#39;#fdbe85&#39;,&#39;#fd8d3c&#39;,&#39;#e6550d&#39;,&#39;#a63603&#39;))
+  title(paste(&quot;cluster&quot;, i))
+  
+  
+  barplot(d[1:10,]$freq, las = 1, names.arg = d[1:10,]$word,
+          col =&quot;#e6550d&quot;, main =paste(&quot;Most frequent words - Cluster &quot;, i),
+          ylab = &quot;Word frequencies&quot;, width = 0.05, border = &quot;red&quot;, las=2)
+  
+}</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-1.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-2.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-3.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-4.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-5.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-6.png" /><!-- --><img src="TextAnalytics_files/figure-html/unnamed-chunk-10-7.png" /><!-- --></p>
+</div>
+<div id="treemap-view-of-the-clusters" class="section level4">
+<h4>Treemap View of the Clusters:</h4>
+<p>Lets populate the TreeMap View of the most frequent 13 terms in each clusters -</p>
+<pre class="r"><code>#number of clusters at the cut
+m &lt;- length(unique(corpus.dtm.sample.dend.cut$cluster))
+
+# number of terms per cluster to show
+n &lt;-7
+
+#intialise an empty data frame
+#fields initiliased with empty vectors
+df &lt;- data.frame(word=character(), freq = double(),cluster = integer())
+# for each cluster plot an explanatory word cloud
+for (i in 1:m) {
+  #the documents in  cluster i
+  cut_doc_ids &lt;-which(corpus.dtm.sample.dend.cut$cluster==i)
+  
+  #the subset of the matrix with these documents
+  corpus.tdm.sample.mat.cluster&lt;- corpus.tdm.sample.mat[, cut_doc_ids]
+  
+  # sort the terms by frequency for the documents in this cluster
+  v &lt;- sort(rowSums(corpus.tdm.sample.mat.cluster),decreasing=TRUE)
+  d &lt;- data.frame(word = names(v),freq=v, cluster=i)
+  
+  rw_nm &lt;- setdiff(rownames(d), stp.words)
+  d &lt;- d[rw_nm, ]
+  
+  # we might want scale so that high frequencies in large cluster don&#39;t predominate
+  d[,2] &lt;- scale(d[,2],center=FALSE, scale=TRUE)
+  
+  # take first n values only
+  d &lt;-d[1:n,]
+  
+  #bind the data for this cluster to the df data frame created earlier
+  df&lt;- rbind(df,d)
+}
+# the geom_treemap seems to only like vectors of values
+df$freq &lt;- as.vector(df$freq)
+
+# simple function to rename the values in the cluster column as &quot;cluster 1, cluster 2, etc&quot;
+clust_name&lt;-function(x){
+  paste(&quot;cluster&quot;, x)
+}
+
+# apply the function to the &#39;cluster&#39; column
+df$cluster&lt;- as.character(apply(df[&quot;cluster&quot;], MARGIN = 2,FUN =clust_name ))
+
+gg&lt;- ggplot(df, aes(area = freq, fill = freq, subgroup=cluster, label = word)) +
+  geom_treemap() +
+  geom_treemap_text(grow = T, reflow = T, colour = &quot;black&quot;) +
+  facet_wrap( ~ cluster) +
+  
+  scale_fill_gradientn(colours = terrain.colors(n, alpha = 0.8)) +
+  theme(legend.position = &quot;bottom&quot;) +
+  labs(title = &quot;The Most Frequent Terms in each cluster &quot;, 
+       caption = &quot;The area of each term is proportional to 
+       its relative frequency within cluster&quot;)
+
+gg</code></pre>
+<p><img src="TextAnalytics_files/figure-html/unnamed-chunk-11-1.png" /><!-- --></p>
+<div id="print-top-15-words-for-better-view" class="section level5">
+<h5>Print top 15 words for better view</h5>
+<pre class="r"><code>df = data.frame(cluster =integer(),topWords=character())
+n = 15
+
+for (i in 1:m) {
+  #the documents in  cluster i
+  cut_doc_ids &lt;-which(corpus.dtm.sample.dend.cut$cluster==i)
+  
+  #the subset of the matrix with these documents
+  corpus.tdm.sample.mat.cluster&lt;- corpus.tdm.sample.mat[, cut_doc_ids]
+  
+  # sort the terms by frequency for the documents in this cluster
+  v &lt;- sort(rowSums(corpus.tdm.sample.mat.cluster),decreasing=TRUE)
+  d &lt;- data.frame(word = names(v),freq=v, cluster=i)
+  
+  rw_nm &lt;- setdiff(rownames(d), stp.words)
+  d &lt;- d[rw_nm, ]
+  
+  # we might want scale so that high frequencies in large cluster don&#39;t predominate
+  d[,2] &lt;- scale(d[,2],center=FALSE, scale=TRUE)
+  
+  d1 =  data.frame(&quot;cluster&quot; = unique(d$cluster), &quot;topWords&quot; = paste(d$word[1:n],collapse = &quot;, &quot;))
+  
+  df &lt;- rbind(df,d1)  
+
+}
+
+df %&gt;%
+  kable() %&gt;%
+  kable_styling(bootstrap_options = &quot;striped&quot;, full_width = F, position = &quot;left&quot;) %&gt;% 
+  scroll_box(height = NULL)</code></pre>
+<div style="border: 1px solid #ddd; padding: 5px; ">
+<table class="table table-striped" style="width: auto !important; ">
+<thead>
+<tr>
+<th style="text-align:right;">
+cluster
+</th>
+<th style="text-align:left;">
+topWords
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+one, articl, univers, like, know, just, peopl, time, think, may, also, right, work, system, make
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:left;">
+game, year, team, articl, player, one, play, think, univers, hit, win, time, just, know, like
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:left;">
+god, one, say, christian, lord, christ, peopl, jesus, know, church, may, believ, like, see, articl
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:left;">
+window, file, imag, program, graphic, bit, system, dos, jpeg, version, run, one, softwar, like, font
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:left;">
+car, articl, one, like, bike, just, know, univers, good, list, engin, also, ride, batteri, new
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:left;">
+israel, arab, jew, jewish, palestinian, one, peopl, articl, isra, state, now, right, univers, know, year
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:left;">
+homosexu, god, gay, cramer, one, peopl, christian, sex, sexual, sin, clayton, say, men, paul, articl
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:left;">
+gun, peopl, batf, fbi, fire, articl, one, koresh, govern, like, just, say, atf, think, children
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:left;">
+key, clipper, govern, phone, escrow, chip, david, encrypt, law, know, sternlight, peopl, one, crimin, netcomcom
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+10
+</td>
+<td style="text-align:left;">
+hst, mission, shuttl, orbit, pat, servic, accessdigexnet, reboost, array, design, mass, much, also, problem, articl
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+11
+</td>
+<td style="text-align:left;">
+muslim, armenian, bosnian, genocid, serb, war, world, kill, said, peopl, univers, turkish, articl, europ, just
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+12
+</td>
+<td style="text-align:left;">
+drive, scsi, ide, control, hard, disk, problem, devic, bus, data, know, dma, transfer, one, articl
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+13
+</td>
+<td style="text-align:left;">
+brian, sandvik, christian, kent, god, jesus, newtonapplecom, even, just, articl, good, apr, want, everyon, one
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="observations-2" class="section level4">
+<h4>Observations:</h4>
+<p>We have found around 13 clusters -</p>
+<ul>
+<li>Following are the details of each cluster -</li>
+<li>Cluster 1 : Generic cluster related to articles, universities, write ups</li>
+<li>Cluster 2 : Related to Games</li>
+<li>Cluster 3 : Related to theism and Christianity</li>
+<li>Cluster 4 : Related to image files in computers</li>
+<li>Cluster 5 : Something related to Car,bike and other vehicles</li>
+<li>Cluster 6 : Related to Israel and Palestinian conflict</li>
+<li>Cluster 7 : Related to homosexuality</li>
+<li>Cluster 8 : Related to US Governmeent Security with the presence of words like FBI, Gun</li>
+<li>Cluster 9 : Related to cyber security as the presence of words like encrypt, key, chip</li>
+<li>Cluster 10 : Something related to space shuttle and space missions</li>
+<li>Cluster 11 : Related to Serbian Bosnian War</li>
+<li>Cluster 12 : Related to drives in computers like scsi, floppy, hard disk</li>
+<li>Cluster 13 : Again something related to religion and Christianity</li>
+</ul>
+<p>Thus we can see the clustering methods can bring hidden pattern in topics present in the corpus of documents based on the presence of words. Also it provides some hierarchical pattern like we can see in a broader sence there are clusters with Religion and Christianity, Computer Hardware and graphics, Automobiles, Games and Sports, Politics and issues of different middle east countries, scintific topics on space exploration and Encryptions. Though the above methodology only consider the word counts and frequencies, further clustering and topic modelling efficiencies can be improved by implementing semantics and word context.</p>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
